@@ -1,0 +1,89 @@
+name: Deploy Frontend to ECS
+ 
+on:
+
+  push:
+
+    branches:
+
+      - main
+ 
+env:
+
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  ECR_REPOSITORY: docker/frontend
+
+  ECS_CLUSTER: finalproject-cluster
+
+  ECS_SERVICE: frontend-service
+ 
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    name: Build and Deploy Frontend
+ 
+    steps:
+
+      - name: Checkout code
+
+        uses: actions/checkout@v3
+ 
+      - name: Configure AWS credentials
+
+        uses: aws-actions/configure-aws-credentials@v2
+
+        with:
+
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          aws-region: ${{ secrets.AWS_REGION }}
+ 
+      - name: Login to Amazon ECR
+
+        uses: aws-actions/amazon-ecr-login@v1
+ 
+      - name: Build Docker image
+
+        run: |
+
+          IMAGE_TAG=$(date +%s)
+
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${IMAGE_TAG} .
+ 
+      - name: Push image to ECR
+
+        run: |
+
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${IMAGE_TAG}
+ 
+      - name: Update ECS task definition
+
+        run: |
+
+          sed -i "s|IMAGE_PLACEHOLDER|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${IMAGE_TAG}|g" ecs-task.json
+ 
+      - name: Deploy new revision
+
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+
+        with:
+
+          task-definition: ecs-task.json
+
+          cluster: ${{ env.ECS_CLUSTER }}
+
+          service: ${{ env.ECS_SERVICE }}
+
+          wait-for-service-stability: true
+
+ 
