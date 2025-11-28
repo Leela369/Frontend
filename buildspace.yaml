@@ -4,7 +4,7 @@ env:
 
   variables:
 
-    ECR_REPO: "977099001332.dkr.ecr.us-east-1.amazonaws.com/finalproject/frontend"
+    ECR_REPO: "117431753750.dkr.ecr.us-east-1.amazonaws.com/docker/frontend"
 
     ECS_CLUSTER: "finalproject-cluster"
 
